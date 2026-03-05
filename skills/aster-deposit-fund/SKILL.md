@@ -21,6 +21,10 @@ description: Deposit funds to Aster from a wallet; private key from env. Use whe
 | BSC | 56 |
 | Arbitrum | 42161 |
 
+## User confirmation
+
+**Always confirm with the user before executing a deposit.** Summarize chain, asset, amount (and broker if not default), and get explicit approval (e.g. "Proceed?", "Confirm deposit?") before running scripts or signing transactions. Do not assume consent from a prior message.
+
 ## Flow
 
 1. **Supported assets** — GET `aster/withdraw/assets?chainIds=<chainId>&networks=EVM&accountType=perp`. Response `data[]`: name, contractAddress, decimals, isNative, chainId. Use to pick asset and token contract for ERC20.
