@@ -1,15 +1,11 @@
 ---
 name: aster-api-market-data-v1
-description: Public REST market data endpoints for Aster Finance Futures API (v1). Covers ping, time, exchangeInfo, order book, trades, klines, tickers, mark price, and funding. Use when fetching market data from Aster Futures API via /fapi/v1/ without authentication (except historicalTrades which requires API key for MARKET_DATA).
+description: Public REST market data for Aster Futures API v1. Ping, time, exchangeInfo, depth, trades, klines, tickers, funding. Use when fetching market data via /fapi/v1/. No auth except historicalTrades (API key MARKET_DATA).
 ---
 
 # Aster API Market Data (v1)
 
-## Base URL
-
-- **https://fapi.asterdex.com**
-
-All market data endpoints are **GET**; no signature required except **historicalTrades** (MARKET_DATA: requires API key). Parameters go in the **query string**.
+**Base:** https://fapi.asterdex.com. All **GET**; query string params; no signature except **historicalTrades** (API key).
 
 ## Endpoints
 
@@ -47,11 +43,4 @@ All market data endpoints are **GET**; no signature required except **historical
 
 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 6h, 8h, 12h, 1d, 3d, 1w, 1M
 
-## Conventions
-
-- **Symbols** in REST responses are **uppercase** (e.g. BTCUSDT). WebSocket stream names use **lowercase** (e.g. btcusdt).
-- All timestamps in responses are **milliseconds**.
-
-## Response shapes
-
-For depth (bids/asks arrays), kline array format, ticker and exchangeInfo filters, see [reference.md](reference.md).
+**Conventions:** REST symbols **uppercase** (BTCUSDT); WS **lowercase** (btcusdt). Timestamps ms. [reference.md](reference.md) — depth/kline/ticker/exchangeInfo shapes.

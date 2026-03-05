@@ -1,46 +1,21 @@
 ---
 name: aster-api-errors
-description: Error codes, rate limits, and safe retry/backoff behavior for Aster Finance Futures API v3. Covers error payload format, REQUEST_WEIGHT and ORDERS limits, 429/418 handling, and timestamp/signature errors. Use when handling API errors, 429/418 responses, or implementing rate-aware clients for Aster Futures.
+description: Error codes, rate limits, 429/418 handling, retry/backoff for Aster Futures API v3. Use when handling API errors or building rate-aware clients.
 ---
 
 # Aster API Errors
 
-## Error payload
+**Payload:** `{ "code": -1121, "msg": "..." }`. Handle by **code** (stable); messages may vary.
 
-Every error response has the form:
+**Rate limits:** From GET /fapi/v3/exchangeInfo → rateLimits. **REQUEST_WEIGHT:** per IP (e.g. 2400/min); header `X-MBX-USED-WEIGHT-*`. **ORDERS:** per account (e.g. 1200/min); header `X-MBX-ORDER-COUNT-*`. **429:** back off. **418:** IP banned (2 min–3 days). Prefer WebSocket to reduce REST load.
 
-```json
-{ "code": -1121, "msg": "Invalid symbol." }
-```
-
-**Codes are stable** across the API; **messages may vary**. Handle by `code`, not by exact `msg`.
-
-## Rate limits
-
-- Limits come from **GET /fapi/v3/exchangeInfo** → `rateLimits` array.
-- **REQUEST_WEIGHT:** e.g. 2400 per minute (per IP). Response header: `X-MBX-USED-WEIGHT-<intervalNum><intervalLetter>` (e.g. 1M).
-- **ORDERS:** e.g. 1200 per minute **per account**. Response header: `X-MBX-ORDER-COUNT-<intervalNum><intervalLetter>`. Rejected/unsuccessful orders may not include this header.
-- **HTTP 429:** Rate limit exceeded. **Back off**; do not retry immediately. Client must reduce request rate.
-- **HTTP 418:** IP auto-banned after repeatedly hitting 429. Ban duration **scales** (2 minutes up to 3 days). Limits are **per IP**, not per API key.
-- Prefer **WebSocket** for live data to reduce REST load and avoid bans.
-
-## Security-related errors
-
-- **-1021 INVALID_TIMESTAMP:** Timestamp outside `recvWindow` or &gt;1s ahead of server. Use **GET /fapi/v3/time** for server time if needed; keep `recvWindow` small (e.g. ≤5000 ms).
-- **-1022 INVALID_SIGNATURE:** Signature invalid. Check signing steps and API wallet private key.
-
-## Error categories
+**Security:** -1021 INVALID_TIMESTAMP → recvWindow or clock; use GET /fapi/v3/time. -1022 INVALID_SIGNATURE → check signing/API wallet key.
 
 | Range | Category | Examples |
 |-------|----------|----------|
-| 10xx | Server/network | -1000 UNKNOWN, -1001 DISCONNECTED, -1003 TOO_MANY_REQUESTS, -1007 TIMEOUT, -1015 TOO_MANY_ORDERS, -1021 INVALID_TIMESTAMP, -1022 INVALID_SIGNATURE |
-| 11xx | Request/params | -1102 MANDATORY_PARAM_EMPTY_OR_MALFORMED, -1121 BAD_SYMBOL, -1130 INVALID_PARAMETER |
-| 20xx | Processing | -2010 NEW_ORDER_REJECTED, -2011 CANCEL_REJECTED, -2013 NO_SUCH_ORDER, -2018 BALANCE_NOT_SUFFICIENT, -2019 MARGIN_NOT_SUFFICIENT, -2021 ORDER_WOULD_IMMEDIATELY_TRIGGER, -2025 MAX_OPEN_ORDER_EXCEEDED |
-| 40xx | Filters/validation | -4004 QTY_LESS_THAN_MIN_QTY, -4014 PRICE_NOT_INCREASED_BY_TICK_SIZE, -4023 QTY_NOT_INCREASED_BY_STEP_SIZE, -4047 THERE_EXISTS_OPEN_ORDERS, -4048 THERE_EXISTS_QUANTITY, -4164 MIN_NOTIONAL |
+| 10xx | Server/network | -1000, -1001, -1003, -1007, -1015, -1021, -1022 |
+| 11xx | Request/params | -1102, -1121, -1130 |
+| 20xx | Processing | -2010, -2011, -2013, -2018, -2019, -2021, -2025 |
+| 40xx | Filters | -4004, -4014, -4023, -4047, -4048, -4164 |
 
-## HTTP status
-
-- **4XX:** Client-side (malformed request, 403 WAF, 429 rate limit, 418 banned).
-- **5XX:** Server-side. **503:** Request may have been processed; execution status UNKNOWN—do not treat as definite failure.
-
-Full code list: [reference.md](reference.md).
+**HTTP:** 4XX = client (403 WAF, 429, 418); 5XX = server. 503 = may have been processed—do not assume failure. Full codes: [reference.md](reference.md).

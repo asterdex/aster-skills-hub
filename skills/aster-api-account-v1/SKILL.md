@@ -1,11 +1,11 @@
 ---
 name: aster-api-account-v1
-description: Account and position endpoints for Aster Finance Futures API (v1 / HMAC-signed). Covers balance, account info, positions, leverage, margin type, isolated margin, and spot–futures transfer. Use when reading or updating futures balance, positions, leverage, margin type, or transferring between spot and futures via /fapi/v1/, /fapi/v2/, or /fapi/v4/. Requires signed requests; see aster-api-auth-v1.
+description: Account, balance, positions, leverage, margin type, isolated margin, spot–futures transfer for Aster Futures API v1/v2/v4. Use when reading/updating balance, positions, or transferring. Signed; see aster-api-auth-v1. Prefer user data stream for real-time.
 ---
 
 # Aster API Account (v1)
 
-All endpoints require **signature**. See **aster-api-auth-v1** skill for signing. Base URL: **https://fapi.asterdex.com**. Prefer **user data stream** for real-time balance and position updates (doc recommendation).
+**Base:** https://fapi.asterdex.com. All endpoints **signed**.
 
 ## Balance and account
 
@@ -46,4 +46,4 @@ All endpoints require **signature**. See **aster-api-auth-v1** skill for signing
 - **GET /fapi/v1/commissionRate** (Weight: 20): symbol required; makerCommissionRate, takerCommissionRate.
 - **GET /fapi/v1/remainingOpenableNotionalValue** (Weight: 20): symbol, leverage required; returns remainingOpenableNotionalValue (USDT).
 
-Response shapes and incomeType values: [reference.md](reference.md).
+[reference.md](reference.md) — response shapes, incomeType.

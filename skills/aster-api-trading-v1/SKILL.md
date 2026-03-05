@@ -1,74 +1,44 @@
 ---
 name: aster-api-trading-v1
-description: Order placement, cancellation, and order queries for Aster Finance Futures API (v1 / HMAC-signed). Covers new order, batch orders, cancel, countdown cancel, and order lookup. Use when placing or canceling orders, batching orders, or querying open or historical orders on Aster Futures via /fapi/v1/. Requires signed requests; see aster-api-auth-v1.
+description: Place, cancel, batch, countdown-cancel, and query orders for Aster Futures API v1 (/fapi/v1/). Use when placing/canceling orders or querying open/historical. Signed; see aster-api-auth-v1.
 ---
 
 # Aster API Trading (v1)
 
-All endpoints require **signature** (TRADE or USER_DATA). See **aster-api-auth-v1** skill for signing. Base URL: **https://fapi.asterdex.com**. POST/DELETE: body **application/x-www-form-urlencoded**.
+**Base:** https://fapi.asterdex.com. Signed (TRADE/USER_DATA). POST/DELETE: body application/x-www-form-urlencoded.
 
 ## New order
 
-**POST /fapi/v1/order** (Weight: 1)
+**POST /fapi/v1/order** (W: 1)
 
-| Parameter | Mandatory | Notes |
-|-----------|-----------|--------|
-| symbol | YES | |
-| side | YES | BUY, SELL |
-| type | YES | See type-specific params below |
-| positionSide | NO | BOTH (one-way) or LONG/SHORT (hedge); required in Hedge Mode |
-| timeInForce | NO | GTC, IOC, FOK, GTX, HIDDEN |
-| quantity | NO | Not with closePosition=true |
-| reduceOnly | NO | "true"/"false"; not with closePosition; not in Hedge Mode |
-| price | NO | |
-| newClientOrderId | NO | Unique, rule: `^[\.A-Z\:/a-z0-9_-]{1,36}$` |
-| stopPrice | NO | For STOP/STOP_MARKET, TAKE_PROFIT/TAKE_PROFIT_MARKET |
-| closePosition | NO | "true"/"false"; only with STOP_MARKET/TAKE_PROFIT_MARKET; cannot send quantity or reduceOnly |
-| activationPrice | NO | TRAILING_STOP_MARKET; default latest price |
-| callbackRate | NO | TRAILING_STOP_MARKET; min 0.1, max 5 (1 = 1%) |
-| workingType | NO | MARK_PRICE, CONTRACT_PRICE (default) |
-| priceProtect | NO | "TRUE"/"FALSE"; for conditional orders |
-| newOrderRespType | NO | ACK (default), RESULT |
+| Parameter | Req | Notes |
+|-----------|-----|--------|
+| symbol, side, type | Y | side: BUY/SELL; type → see below |
+| positionSide | N | BOTH or LONG/SHORT (hedge); req. in Hedge Mode |
+| timeInForce | N | GTC, IOC, FOK, GTX, HIDDEN |
+| quantity | N | Not with closePosition=true |
+| reduceOnly | N | "true"/"false"; not with closePosition/hedge |
+| price, stopPrice | N | stopPrice for STOP*/TAKE_PROFIT* |
+| closePosition | N | "true"/"false"; STOP_MARKET/TAKE_PROFIT_MARKET only; no quantity/reduceOnly |
+| activationPrice, callbackRate | N | TRAILING_STOP_MARKET; callbackRate 0.1–5 (1=1%) |
+| workingType | N | MARK_PRICE, CONTRACT_PRICE (default) |
+| priceProtect | N | "TRUE"/"FALSE" |
+| newClientOrderId | N | Unique; `^[\.A-Z\:/a-z0-9_-]{1,36}$` |
+| newOrderRespType | N | ACK (default), RESULT |
 
-**Type-specific mandatory parameters:**
+**Type-specific required:** LIMIT → timeInForce, quantity, price. MARKET → quantity. STOP/TAKE_PROFIT → quantity, price, stopPrice. STOP_MARKET/TAKE_PROFIT_MARKET → stopPrice. TRAILING_STOP_MARKET → callbackRate.
 
-| type | Additional required |
-|------|---------------------|
-| LIMIT | timeInForce, quantity, price |
-| MARKET | quantity |
-| STOP, TAKE_PROFIT | quantity, price, stopPrice |
-| STOP_MARKET, TAKE_PROFIT_MARKET | stopPrice |
-| TRAILING_STOP_MARKET | callbackRate |
+**Trigger rules:** STOP/STOP_MARKET: BUY → latest ≥ stopPrice; SELL → latest ≤ stopPrice. TAKE_PROFIT/TAKE_PROFIT_MARKET: BUY → latest ≤ stopPrice; SELL → latest ≥ stopPrice. TRAILING_STOP_MARKET: BUY → low ≤ activationPrice and latest ≥ low×(1+callbackRate); SELL → high ≥ activationPrice and latest ≤ high×(1-callbackRate). activationPrice: BUY &lt; latest, SELL &gt; latest (else -2021). closePosition=true: close all long (SELL) or short (BUY); no quantity/reduceOnly; hedge: no BUY for LONG / SELL for SHORT.
 
-Condition order trigger rules (workingType = MARK_PRICE or CONTRACT_PRICE):
+## Batch / Cancel / Countdown / Query
 
-- **STOP / STOP_MARKET:** BUY → trigger when latest price >= stopPrice; SELL → latest price <= stopPrice.
-- **TAKE_PROFIT / TAKE_PROFIT_MARKET:** BUY → latest price <= stopPrice; SELL → latest price >= stopPrice.
-- **TRAILING_STOP_MARKET:** BUY → lowest price after place <= activationPrice, and latest price >= lowest * (1 + callbackRate); SELL → highest >= activationPrice, and latest <= highest * (1 - callbackRate). activationPrice: BUY must be &lt; latest price; SELL must be &gt; latest (else -2021).
+- **POST /fapi/v1/batchOrders** (W: 5): `batchOrders` array, max 5; same params as order; responses match order.
+- **DELETE /fapi/v1/order** (W: 1): symbol + orderId or origClientOrderId.
+- **DELETE /fapi/v1/allOpenOrders** (W: 1): symbol.
+- **DELETE /fapi/v1/batchOrders** (W: 1): symbol + orderIdList or origClientOrderIdList (max 10).
+- **POST /fapi/v1/countdownCancelAll** (W: 10): symbol, countdownTime (ms). Cancel all at countdown end; 0 = cancel timer. Heartbeat to extend (e.g. 30s with 120000 ms). Checks ~10 ms.
+- **GET /fapi/v1/order**, **openOrder** (W: 1): symbol + orderId or origClientOrderId.
+- **GET /fapi/v1/openOrders** (W: 1 or 40): symbol optional; no symbol = all (40).
+- **GET /fapi/v1/allOrders** (W: 5): symbol req.; orderId, startTime, endTime, limit (500 default, 1000 max). Window &lt; 7 days; orderId → orders ≥ that id. CANCELED/EXPIRED &gt;7d with no fills may be missing.
 
-closePosition=true: closes all long (SELL) or all short (BUY); no quantity/reduceOnly; in Hedge Mode cannot use BUY for LONG or SELL for SHORT.
-
-## Batch orders
-
-**POST /fapi/v1/batchOrders** (Weight: 5). Body: `batchOrders` = array of order params (max 5). Same parameter rules as new order. Processed concurrently; order of responses matches request order.
-
-## Cancel
-
-- **DELETE /fapi/v1/order** (Weight: 1): symbol + (orderId or origClientOrderId).
-- **DELETE /fapi/v1/allOpenOrders** (Weight: 1): symbol.
-- **DELETE /fapi/v1/batchOrders** (Weight: 1): symbol + orderIdList (array, max 10) or origClientOrderIdList (max 10).
-
-## Countdown cancel all
-
-**POST /fapi/v1/countdownCancelAll** (Weight: 10): symbol, countdownTime (ms; 1000 = 1s). Cancel all open orders for symbol at end of countdown. Send 0 to cancel the timer. Call repeatedly as heartbeat to extend (e.g. every 30s with countdownTime 120000). System checks ~every 10 ms; allow redundancy.
-
-## Query
-
-- **GET /fapi/v1/order** (Weight: 1): symbol + (orderId or origClientOrderId).
-- **GET /fapi/v1/openOrder** (Weight: 1): symbol + (orderId or origClientOrderId).
-- **GET /fapi/v1/openOrders** (Weight: 1 or 40): symbol optional; no symbol returns all symbols (40).
-- **GET /fapi/v1/allOrders** (Weight: 5): symbol required; orderId, startTime, endTime, limit (default 500, max 1000). Query window &lt; 7 days. If orderId set, returns orders >= that orderId.
-
-Orders that are CANCELED/EXPIRED with no fills and older than 7 days may not be found.
-
-Full parameter tables and response fields: [reference.md](reference.md).
+[reference.md](reference.md) — full params and response fields.

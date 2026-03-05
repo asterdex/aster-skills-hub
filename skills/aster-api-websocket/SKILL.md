@@ -1,32 +1,17 @@
 ---
 name: aster-api-websocket
-description: WebSocket market streams and user data stream for Aster Finance Futures API v3. Covers subscription model, stream names, listenKey lifecycle, and event payloads. Use when implementing real-time market data or user events (orders, balance, positions) on Aster Futures. listenKey endpoints require signature; see aster-api-auth.
+description: WebSocket market + user data streams for Aster Futures API v3. Subscription model, stream names, listenKey. Use when implementing real-time market or user events (orders, balance, positions). listenKey = signed; see aster-api-auth.
 ---
 
 # Aster API WebSocket
 
-## Base URL
+**Base:** wss://fstream.asterdex.com. **Raw:** `/ws/<streamName>`. **Combined:** `/stream?streams=name1/name2/...` → `{"stream":"<name>","data":<payload>}`. Stream names **lowercase** (e.g. btcusdt).
 
-- **wss://fstream.asterdex.com**
+**Limits:** 24h; ping 5 min → pong within 15 min; 10 msg/s; max 200 streams.
 
-**Raw stream:** `/ws/<streamName>`. **Combined:** `/stream?streams=name1/name2/...`. Combined events: `{"stream":"<name>","data":<payload>}`. All stream names use **lowercase** symbols (e.g. btcusdt).
+## Market: subscribe / unsubscribe
 
-## Connection limits
-
-- Single connection valid **24 hours**; expect disconnect at 24h.
-- Server sends **ping** every 5 min; must respond with **pong** within 15 min or disconnect.
-- **10 incoming messages/second** limit; excess can disconnect; repeated disconnects can get IP banned.
-- Max **200 streams** per connection.
-
-## Market streams: subscribe / unsubscribe
-
-Send JSON over the socket:
-
-- **Subscribe:** `{"method":"SUBSCRIBE","params":["btcusdt@aggTrade","btcusdt@depth"],"id":1}` → response `{"result":null,"id":1}`.
-- **Unsubscribe:** `{"method":"UNSUBSCRIBE","params":["btcusdt@depth"],"id":312}`.
-- **List:** `{"method":"LIST_SUBSCRIPTIONS","id":3}` → `{"result":["btcusdt@aggTrade"],"id":3}`.
-
-`id` is an unsigned integer.
+JSON: **Subscribe** `{"method":"SUBSCRIBE","params":["btcusdt@aggTrade","btcusdt@depth"],"id":1}` → `{"result":null,"id":1}`. **Unsubscribe:** `UNSUBSCRIBE` + params. **List:** `LIST_SUBSCRIPTIONS`. `id` = unsigned int.
 
 ## Stream names (market)
 
@@ -70,4 +55,4 @@ User data events are **not guaranteed in order** during heavy load; order update
 6. Then each event’s `pu` must equal previous event’s `u`; else re-sync from step 3.
 7. Quantity in events is **absolute**; quantity 0 means remove that price level.
 
-Payload shapes and examples: [reference.md](reference.md).
+[reference.md](reference.md) — payload shapes.

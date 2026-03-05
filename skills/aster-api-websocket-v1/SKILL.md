@@ -1,32 +1,17 @@
 ---
 name: aster-api-websocket-v1
-description: WebSocket market streams and user data stream for Aster Finance Futures API (v1). Covers subscription model, stream names, listenKey lifecycle (via /fapi/v1/listenKey), and event payloads. Use when implementing real-time market data or user events (orders, balance, positions) on Aster Futures. listenKey endpoints require HMAC-signed requests; see aster-api-auth-v1.
+description: WebSocket market + user data streams for Aster Futures API v1. Subscription model, stream names, listenKey (/fapi/v1/listenKey). Use when implementing real-time market or user events (orders, balance, positions). listenKey = signed; see aster-api-auth-v1.
 ---
 
 # Aster API WebSocket (v1)
 
-## Base URL
+**Base:** wss://fstream.asterdex.com. **Raw:** `/ws/<streamName>`. **Combined:** `/stream?streams=name1/name2/...` → `{"stream":"<name>","data":<payload>}`. Stream names **lowercase** (e.g. btcusdt).
 
-- **wss://fstream.asterdex.com**
+**Limits:** Connection 24h; ping every 5 min → pong within 15 min; 10 msg/s; max 200 streams.
 
-**Raw stream:** `/ws/<streamName>`. **Combined:** `/stream?streams=name1/name2/...`. Combined events: `{"stream":"<name>","data":<payload>}`. All stream names use **lowercase** symbols (e.g. btcusdt).
+## Market: subscribe / unsubscribe
 
-## Connection limits
-
-- Single connection valid **24 hours**; expect disconnect at 24h.
-- Server sends **ping** every 5 min; must respond with **pong** within 15 min or disconnect.
-- **10 incoming messages/second** limit; excess can disconnect; repeated disconnects can get IP banned.
-- Max **200 streams** per connection.
-
-## Market streams: subscribe / unsubscribe
-
-Send JSON over the socket:
-
-- **Subscribe:** `{"method":"SUBSCRIBE","params":["btcusdt@aggTrade","btcusdt@depth"],"id":1}` → response `{"result":null,"id":1}`.
-- **Unsubscribe:** `{"method":"UNSUBSCRIBE","params":["btcusdt@depth"],"id":312}`.
-- **List:** `{"method":"LIST_SUBSCRIPTIONS","id":3}` → `{"result":["btcusdt@aggTrade"],"id":3}`.
-
-`id` is an unsigned integer.
+JSON: **Subscribe** `{"method":"SUBSCRIBE","params":["btcusdt@aggTrade","btcusdt@depth"],"id":1}` → `{"result":null,"id":1}`. **Unsubscribe:** `UNSUBSCRIBE` + params. **List:** `LIST_SUBSCRIPTIONS`. `id` = unsigned int.
 
 ## Stream names (market)
 
@@ -47,27 +32,20 @@ Send JSON over the socket:
 | `<symbol>@forceOrder` | Liquidation snapshot (1000ms) |
 | `!forceOrder@arr` | All liquidations |
 
-## User data stream
+## User data stream (signed)
 
-Requires **signed** REST calls (see **aster-api-auth-v1**).
+1. **Start:** POST /fapi/v1/listenKey → `{ "listenKey": "..." }` (existing key extended 60 min).
+2. **Connect:** wss://fstream.asterdex.com/ws/<listenKey>.
+3. **Keepalive:** PUT /fapi/v1/listenKey &lt;60 min (e.g. 30 min).
+4. **Close:** DELETE /fapi/v1/listenKey.
 
-1. **Start:** `POST /fapi/v1/listenKey` (signed) → `{ "listenKey": "..." }`. If account already has active listenKey, same key returned and validity extended 60 min.
-2. **Connect:** `wss://fstream.asterdex.com/ws/<listenKey>`.
-3. **Keepalive:** `PUT /fapi/v1/listenKey` (signed) at least every **&lt;60 min** (e.g. every 30 min).
-4. **Close:** `DELETE /fapi/v1/listenKey` (signed).
+Events not guaranteed in order; use `E` for ordering. **Events:** ACCOUNT_UPDATE, ORDER_TRADE_UPDATE, ACCOUNT_CONFIG_UPDATE, MARGIN_CALL, listenKeyExpired.
 
-User data events are **not guaranteed in order** during heavy load; order updates by event time `E`.
+## Order book sync (depth)
 
-**Events:** `ACCOUNT_UPDATE` (balance/position), `ORDER_TRADE_UPDATE`, `ACCOUNT_CONFIG_UPDATE` (leverage, multi-asset, position mode), `MARGIN_CALL`, `listenKeyExpired`.
+1. Connect to `btcusdt@depth`; buffer events.
+2. Snapshot: GET /fapi/v1/depth?symbol=BTCUSDT&limit=1000.
+3. Drop events with `u` &lt; lastUpdateId; first valid: `U` ≤ lastUpdateId and `u` ≥ lastUpdateId.
+4. Each event: `pu` = previous `u`; else re-sync from step 2. Qty absolute; 0 = remove level.
 
-## Order book sync (depth stream)
-
-1. Connect to `btcusdt@depth` (or combined).
-2. Buffer incoming events.
-3. Get snapshot: `GET /fapi/v1/depth?symbol=BTCUSDT&limit=1000`.
-4. Drop events with `u` &lt; snapshot `lastUpdateId`.
-5. First valid event: `U` ≤ `lastUpdateId` and `u` ≥ `lastUpdateId`.
-6. Then each event's `pu` must equal previous event's `u`; else re-sync from step 3.
-7. Quantity in events is **absolute**; quantity 0 means remove that price level.
-
-Payload shapes and examples: [reference.md](reference.md).
+[reference.md](reference.md) — payload shapes.
