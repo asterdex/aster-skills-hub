@@ -23,13 +23,14 @@ description: Deposit funds to Aster from a wallet; private key from env. Use whe
 
 ## User confirmation
 
-**Always confirm with the user before executing a deposit.** Summarize chain, asset, amount (and broker if not default), and get explicit approval (e.g. "Proceed?", "Confirm deposit?") before running scripts or signing transactions. Do not assume consent from a prior message.
+
 
 ## Flow
 
 1. **Supported assets** — GET `aster/withdraw/assets?chainIds=<chainId>&networks=EVM&accountType=perp`. Response `data[]`: name, contractAddress, decimals, isNative, chainId. Use to pick asset and token contract for ERC20.
 2. **Deposit address** — GET `web3/ae/deposit-address?chainId=<chainId>`. Response `data` = deposit address (string). Same address for native and ERC20 on that chain.
-3. **On-chain send** — From wallet (key from env), sign with appropriate RPC for chain:
+3. **Always confirm with the user before executing a deposit.** Summarize chain, asset, amount (and broker if not default), and get explicit approval (e.g. "Proceed?", "Confirm deposit?") before running scripts or signing transactions. Do not assume consent from a prior message.
+4. **On-chain send** — From wallet (key from env), sign with appropriate RPC for chain:
    - **Native:** Send tx to deposit address with `value = amount` (wei).
    - **ERC20:** Approve deposit address for amount, then `transfer(depositAddress, amount)` from wallet.
 
