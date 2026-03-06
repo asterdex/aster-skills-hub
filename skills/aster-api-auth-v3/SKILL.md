@@ -1,5 +1,5 @@
 ---
-name: aster-api-auth
+name: aster-api-auth-v3
 description: EIP-712 signed requests for Aster Futures API v3. Nonce, signature payload, request format. Use when calling TRADE, USER_DATA, USER_STREAM, or MARKET_DATA.
 ---
 

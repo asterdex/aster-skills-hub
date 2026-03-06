@@ -1,5 +1,5 @@
 ---
-name: aster-api-market-data
+name: aster-api-market-data-v3
 description: Public REST market data for Aster Futures API v3. Ping, time, exchangeInfo, depth, trades, klines, tickers, funding. Use when fetching market data. No auth.
 ---
 

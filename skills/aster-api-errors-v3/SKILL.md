@@ -1,5 +1,5 @@
 ---
-name: aster-api-errors
+name: aster-api-errors-v3
 description: Error codes, rate limits, 429/418 handling, retry/backoff for Aster Futures API v3. Use when handling API errors or building rate-aware clients.
 ---
 

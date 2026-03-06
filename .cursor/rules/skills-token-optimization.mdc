@@ -10,7 +10,7 @@ When editing skills in this repo:
 
 - **SKILL.md**: Essential only. Assume the agent is capable; add only what it wouldn't know (endpoints, params, stream names, auth flow). Move payload shapes, long examples, and edge cases to reference.md.
 - **Frontmatter description**: One sentence: what the skill does + "Use when [trigger terms]." Omit "Covers X" if the title/section list is clear.
-- **Auth**: One pointer per skill: "Signed; see aster-api-auth-v1" (or aster-api-auth). Do not repeat in every section.
+- **Auth**: One pointer per skill: "Signed; see aster-api-auth-v3" (or aster-api-auth-v1). Do not repeat in every section.
 - **Tables**: Use Y/N for mandatory, short column headers (e.g. Req, Notes). Keep endpoint tables; move full field lists to reference.md.
 - **Prose**: Prefer bullets and tables over paragraphs. No filler ("Note that...", "It is important to...").
 - **reference.md**: Dense payload/field reference. Link from SKILL.md with a single line at the end: "Payload shapes: [reference.md](reference.md)."

@@ -26,17 +26,17 @@ Coverage includes:
 
 | Skill | Purpose |
 |-------|---------|
-| **aster-api-auth** | EIP-712 signed requests, nonce, signature payload |
+| **aster-api-auth-v3** | EIP-712 signed requests, nonce, signature payload |
 | **aster-api-auth-v1** | Same for v1 API |
-| **aster-api-trading** | Orders: place, cancel, batch, query (open/history) |
+| **aster-api-trading-v3** | Orders: place, cancel, batch, query (open/history) |
 | **aster-api-trading-v1** | Same for v1 API |
-| **aster-api-market-data** | Public REST: ping, time, exchangeInfo, depth, trades, klines, tickers, funding |
+| **aster-api-market-data-v3** | Public REST: ping, time, exchangeInfo, depth, trades, klines, tickers, funding |
 | **aster-api-market-data-v1** | Same for v1 API |
-| **aster-api-websocket** | WebSocket: market streams + user data stream, listenKey |
+| **aster-api-websocket-v3** | WebSocket: market streams + user data stream, listenKey |
 | **aster-api-websocket-v1** | Same for v1 API |
-| **aster-api-account** | Account, balance, positions, transfers, income |
+| **aster-api-account-v3** | Account, balance, positions, transfers, income |
 | **aster-api-account-v1** | Same for v1 API |
-| **aster-api-errors** | Error codes, rate limits, 429/418 handling, retry/backoff |
+| **aster-api-errors-v3** | Error codes, rate limits, 429/418 handling, retry/backoff |
 | **aster-api-errors-v1** | Same for v1 API |
 | **aster-deposit-fund** | Deposit funds to Aster from wallet; supported assets and deposit address via BAPI; private key from env; ETH, BSC, Arbitrum |
 
@@ -102,7 +102,7 @@ OpenClaw loads skills from, in order of precedence:
 
 **Option A — Workspace skills**
 
-Clone this repo and copy or symlink its `skills/` contents into your OpenClaw workspace skills folder (often `~/.openclaw/workspace/skills/`). Each skill should appear as its own folder, e.g. `~/.openclaw/workspace/skills/aster-api-auth`, `~/.openclaw/workspace/skills/aster-api-trading`, and so on.
+Clone this repo and copy or symlink its `skills/` contents into your OpenClaw workspace skills folder (often `~/.openclaw/workspace/skills/`). Each skill should appear as its own folder, e.g. `~/.openclaw/workspace/skills/aster-api-auth-v3`, `~/.openclaw/workspace/skills/aster-api-trading-v3`, and so on.
 
 **Option B — Extra skill dirs**
 
