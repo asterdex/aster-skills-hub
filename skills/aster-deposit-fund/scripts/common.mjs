@@ -1,16 +1,45 @@
 /**
  * Shared config, BAPI helpers, and ABIs for Aster deposit scripts.
+ *
+ * Security hardening applied (see SECURITY-CHANGELOG.md):
+ * - SEC-01: Treasury address whitelist against oracle attacks
+ * - SEC-04: Public RPC warnings for production usage
+ * - SEC-05: Single source of truth for treasury ABI
+ * - SEC-09: Max gas limit to prevent gas drain
+ * - SEC-10: Per-chain confirmation requirements
  */
 
 import { getAddress } from "viem";
 import { mainnet, bsc, arbitrum } from "viem/chains";
+import { treasuryContractABI } from "./aster-smart-contract-abi.ts";
 
 export const BAPI_BASE = "https://www.asterdex.com/bapi/futures/v1/public/future";
+
+// --- SEC-10: Required confirmations per chain (reorg protection) ---
+export const REQUIRED_CONFIRMATIONS = {
+  1: 2,      // ETH: 2 confirmations
+  56: 3,     // BSC: 3 confirmations (higher reorg risk)
+  42161: 2,  // Arbitrum: 2 confirmations
+};
+
+// --- SEC-09: Max gas limit per transaction to prevent gas drain ---
+export const MAX_GAS_LIMIT = 500_000n;
 
 export const CHAINS = {
   eth: { chainId: 1, chain: mainnet, rpcEnv: "ETH_RPC_URL", defaultRpc: "https://ethereum-rpc.publicnode.com" },
   bsc: { chainId: 56, chain: bsc, rpcEnv: "BSC_RPC_URL", defaultRpc: "https://bsc-rpc.publicnode.com" },
   arbitrum: { chainId: 42161, chain: arbitrum, rpcEnv: "ARBITRUM_RPC_URL", defaultRpc: "https://arbitrum-one-rpc.publicnode.com" },
+};
+
+// --- SEC-01: Treasury address whitelist ---
+// IMPORTANT: Update these addresses when Aster deploys new treasury contracts.
+// Addresses MUST be checksummed (mixed-case EIP-55).
+// Set env ASTER_TREASURY_WHITELIST_DISABLED=true ONLY for development/testing.
+const TREASURY_WHITELIST = {
+  // Populate with official Aster treasury addresses per chain:
+  // 1:     '0x...', // ETH mainnet treasury
+  // 56:    '0x...', // BSC treasury
+  // 42161: '0x...', // Arbitrum treasury
 };
 
 export const ERC20_ABI = [
@@ -21,26 +50,8 @@ export const ERC20_BALANCE_ABI = [
   { name: "balanceOf", type: "function", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
 ];
 
-export const TREASURY_ABI = [
-  {
-    inputs: [
-      { internalType: "address", name: "currency", type: "address" },
-      { internalType: "uint256", name: "amount", type: "uint256" },
-      { internalType: "uint256", name: "broker", type: "uint256" },
-    ],
-    name: "deposit",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "uint256", name: "broker", type: "uint256" }],
-    name: "depositNative",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-];
+// --- SEC-05: Single source of truth for treasury ABI (imported from aster-smart-contract-abi.ts) ---
+export const TREASURY_ABI = treasuryContractABI;
 
 export async function fetchJson(url) {
   const res = await fetch(url);
@@ -56,14 +67,65 @@ export async function getAssets(chainId) {
   return json.data || [];
 }
 
+// --- SEC-01: Validate deposit address against whitelist ---
 export async function getDepositAddress(chainId) {
   const url = `${BAPI_BASE}/web3/ae/deposit-address?chainId=${chainId}`;
   const json = await fetchJson(url);
   const addr = json.data;
-  if (!addr || typeof addr !== "string") throw new Error("Missing deposit address");
-  return getAddress(addr);
+  if (!addr || typeof addr !== "string") throw new Error("Missing deposit address from API");
+  const checksummed = getAddress(addr);
+
+  const whitelistDisabled = process.env.ASTER_TREASURY_WHITELIST_DISABLED === "true";
+  const expectedAddr = TREASURY_WHITELIST[chainId];
+
+  if (expectedAddr) {
+    if (checksummed.toLowerCase() !== getAddress(expectedAddr).toLowerCase()) {
+      throw new Error(
+        `[SEC-01] Deposit address mismatch! API returned ${checksummed}, ` +
+        `expected whitelisted ${expectedAddr} for chainId ${chainId}. ` +
+        `Possible oracle attack. Aborting.`
+      );
+    }
+  } else if (!whitelistDisabled) {
+    console.warn(
+      `[SEC-01] WARNING: No whitelisted treasury address for chainId ${chainId}. ` +
+      `Set TREASURY_WHITELIST[${chainId}] in common.mjs before using in production. ` +
+      `Set ASTER_TREASURY_WHITELIST_DISABLED=true to suppress (dev/test only).`
+    );
+  }
+
+  return checksummed;
 }
 
+// --- SEC-04: RPC URL with production warning ---
 export function getRpcUrl(chainConf) {
-  return process.env[chainConf.rpcEnv] || chainConf.defaultRpc;
+  const envRpc = process.env[chainConf.rpcEnv];
+  if (envRpc) return envRpc;
+
+  console.warn(
+    `[SEC-04] WARNING: Using public RPC (${chainConf.defaultRpc}). ` +
+    `Public RPCs have no SLA, no auth, and can manipulate responses. ` +
+    `Set ${chainConf.rpcEnv} for production (Alchemy, Infura, private node).`
+  );
+  return chainConf.defaultRpc;
+}
+
+// --- SEC-02: Strict private key validation ---
+export function validatePrivateKey(key) {
+  if (!key) {
+    console.error("ASTER_DEPOSIT_PRIVATE_KEY not set in environment.");
+    process.exit(1);
+  }
+  if (!/^0x[0-9a-fA-F]{64}$/.test(key)) {
+    console.error("ASTER_DEPOSIT_PRIVATE_KEY invalid: must be 0x followed by exactly 64 hex characters.");
+    process.exit(1);
+  }
+  return key;
+}
+
+// --- SEC-02: Sanitize errors to prevent key leakage in logs ---
+export function sanitizeError(err) {
+  if (!err) return "Unknown error";
+  const msg = err.message || String(err);
+  return msg.replace(/0x[0-9a-fA-F]{64}/g, "0x[REDACTED]");
 }

@@ -1,3 +1,7 @@
+/**
+ * Aster Treasury contract ABI — single source of truth (SEC-05).
+ * common.mjs imports from here. Do NOT duplicate this ABI elsewhere.
+ */
 export const treasuryContractABI = [
   {
     inputs: [

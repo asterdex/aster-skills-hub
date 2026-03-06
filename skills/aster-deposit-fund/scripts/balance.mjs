@@ -1,13 +1,14 @@
 #!/usr/bin/env bun
 /**
- * Wallet token balances for Aster deposit–supported assets. Uses Aster assets endpoint + viem.
- * Env: optional ASTER_DEPOSIT_PRIVATE_KEY (to derive address); or pass --address. Optional: ETH_RPC_URL, BSC_RPC_URL, ARBITRUM_RPC_URL.
- * Usage: bun run balance.mjs --chain <eth|bsc|arbitrum> [--address <0x...>]
+ * Wallet token balances for Aster deposit-supported assets. Uses Aster assets endpoint + viem.
+ * Usage: bun run balance.mjs --chain <eth|bsc|arbitrum> --address <0x...>
+ *
+ * SEC-07: This is a read-only operation. Only a public address is needed.
+ * The private key is NEVER loaded. Use --address or ASTER_WALLET_ADDRESS env.
  */
 
 import { createPublicClient, http, getAddress, formatUnits } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { CHAINS, getAssets, getRpcUrl, ERC20_BALANCE_ABI } from "./common.mjs";
+import { CHAINS, getAssets, getRpcUrl, ERC20_BALANCE_ABI, sanitizeError } from "./common.mjs";
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -22,7 +23,7 @@ function parseArgs() {
 function main() {
   const { chain, address: cliAddress } = parseArgs();
   if (!chain) {
-    console.error("Usage: bun run balance.mjs --chain <eth|bsc|arbitrum> [--address <0x...>]");
+    console.error("Usage: bun run balance.mjs --chain <eth|bsc|arbitrum> --address <0x...>");
     process.exit(1);
   }
 
@@ -32,14 +33,14 @@ function main() {
     process.exit(1);
   }
 
-  let walletAddress = cliAddress;
+  // SEC-07: Use --address flag or ASTER_WALLET_ADDRESS env. Never load private key for reads.
+  let walletAddress = cliAddress || process.env.ASTER_WALLET_ADDRESS;
   if (!walletAddress) {
-    const key = process.env.ASTER_DEPOSIT_PRIVATE_KEY;
-    if (!key || !key.startsWith("0x")) {
-      console.error("Set ASTER_DEPOSIT_PRIVATE_KEY in env or pass --address <0x...>");
-      process.exit(1);
-    }
-    walletAddress = privateKeyToAccount(key).address;
+    console.error(
+      "Address required. Use --address <0x...> or set ASTER_WALLET_ADDRESS in env.\n" +
+      "This is a read-only operation; no private key is needed."
+    );
+    process.exit(1);
   }
   walletAddress = getAddress(walletAddress);
 
@@ -90,7 +91,7 @@ function main() {
       }
     }
   })().catch((err) => {
-    console.error(err);
+    console.error(sanitizeError(err));
     process.exit(1);
   });
 }
