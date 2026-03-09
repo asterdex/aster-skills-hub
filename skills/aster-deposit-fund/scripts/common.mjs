@@ -31,15 +31,14 @@ export const CHAINS = {
   arbitrum: { chainId: 42161, chain: arbitrum, rpcEnv: "ARBITRUM_RPC_URL", defaultRpc: "https://arbitrum-one-rpc.publicnode.com" },
 };
 
-// --- SEC-01: Treasury address whitelist ---
-// IMPORTANT: Update these addresses when Aster deploys new treasury contracts.
+// --- SEC-01: Treasury address whitelist (hardcoded deposit addresses) ---
+// When set, getDepositAddress() returns this and skips the API call.
 // Addresses MUST be checksummed (mixed-case EIP-55).
 // Set env ASTER_TREASURY_WHITELIST_DISABLED=true ONLY for development/testing.
 const TREASURY_WHITELIST = {
-  // Populate with official Aster treasury addresses per chain:
-  // 1:     '0x...', // ETH mainnet treasury
-  // 56:    '0x...', // BSC treasury
-  // 42161: '0x...', // Arbitrum treasury
+  1: "0x604DD02d620633Ae427888d41bfd15e38483736E",     // ETH mainnet (deposit-address?chainId=1)
+  56: "0x128463A60784c4D3f46c23Af3f65Ed859Ba87974",    // BSC (deposit-address?chainId=56)
+  42161: "0x9E36CB86a159d479cEd94Fa05036f235Ac40E1d5", // Arbitrum (deposit-address?chainId=42161)
 };
 
 export const ERC20_ABI = [
@@ -67,8 +66,13 @@ export async function getAssets(chainId) {
   return json.data || [];
 }
 
-// --- SEC-01: Validate deposit address against whitelist ---
+// --- SEC-01: Hardcoded deposit address when in whitelist; otherwise fetch and validate ---
 export async function getDepositAddress(chainId) {
+  const hardcoded = TREASURY_WHITELIST[chainId];
+  if (hardcoded) {
+    return getAddress(hardcoded);
+  }
+
   const url = `${BAPI_BASE}/web3/ae/deposit-address?chainId=${chainId}`;
   const json = await fetchJson(url);
   const addr = json.data;
@@ -76,17 +80,7 @@ export async function getDepositAddress(chainId) {
   const checksummed = getAddress(addr);
 
   const whitelistDisabled = process.env.ASTER_TREASURY_WHITELIST_DISABLED === "true";
-  const expectedAddr = TREASURY_WHITELIST[chainId];
-
-  if (expectedAddr) {
-    if (checksummed.toLowerCase() !== getAddress(expectedAddr).toLowerCase()) {
-      throw new Error(
-        `[SEC-01] Deposit address mismatch! API returned ${checksummed}, ` +
-        `expected whitelisted ${expectedAddr} for chainId ${chainId}. ` +
-        `Possible oracle attack. Aborting.`
-      );
-    }
-  } else if (!whitelistDisabled) {
+  if (!whitelistDisabled) {
     console.warn(
       `[SEC-01] WARNING: No whitelisted treasury address for chainId ${chainId}. ` +
       `Set TREASURY_WHITELIST[${chainId}] in common.mjs before using in production. ` +
