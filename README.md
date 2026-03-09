@@ -1,6 +1,4 @@
-# Aster Skills Hub (Security-Hardened Fork)
-
-> Security-hardened fork of [`asterdex/aster-skills-hub`](https://github.com/asterdex/aster-skills-hub). 12 vulnerabilities fixed (2 critical, 1 high, 4 medium, 5 low). See [`SECURITY-CHANGELOG.md`](SECURITY-CHANGELOG.md) for details.
+# Aster Skills Hub
 
 OpenClaw skills for the **Aster Finance Futures API**.
 
