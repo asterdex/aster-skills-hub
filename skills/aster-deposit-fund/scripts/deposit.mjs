@@ -92,6 +92,15 @@ function main() {
     const decimals = Number(item.decimals) || 18;
     const decimalsForAmount = item.isNative ? (chainConf.chain.nativeCurrency?.decimals ?? 18) : decimals;
     const amountRaw = parseUnits(amount, decimalsForAmount);
+    // Audit: reject non-positive amount (parseUnits can return negative)
+    if (amountRaw <= 0n) {
+      console.error("Amount must be positive. Got:", amount);
+      process.exit(1);
+    }
+    if (broker < 1n) {
+      console.error("Broker ID must be >= 1. Got:", broker.toString());
+      process.exit(1);
+    }
 
     if (dryRun) {
       console.log("DRY RUN — no transactions will be sent.\n");

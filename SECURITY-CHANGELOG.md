@@ -53,7 +53,7 @@ Before submitting `approve()` + `deposit()`, the script now checks `balanceOf()`
 The `privateKeyToAccount` import is removed. `balance.mjs` now requires `--address` or `ASTER_WALLET_ADDRESS` env. A read-only operation never needs a private key.
 
 ### SEC-08 — chainId 1666 documentation
-**File:** `aster-api-auth/SKILL.md`
+**File:** `skills/aster-api-auth-v3/SKILL.md`
 Added explicit note explaining that chainId `1666` in the EIP-712 domain is an off-chain AsterDex signing identifier, not the Harmony ONE chain. Prevents confusion with on-chain deposit chainIds.
 
 ### SEC-09 — Explicit gas limit
