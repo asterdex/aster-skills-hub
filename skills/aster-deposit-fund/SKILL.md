@@ -5,8 +5,6 @@ description: Deposit funds to Aster from a wallet; private key from env. Use whe
 
 # Aster Deposit Fund
 
-**Base URL:** `https://www.asterdex.com/bapi/futures/v1/public/future/`. Public endpoints; no auth.
-
 ## Env
 
 | Var | Required | Description |
@@ -45,13 +43,12 @@ Failure to confirm is a critical safety violation in an autonomous agent context
 
 ## Flow
 
-1. **Supported assets** — GET `aster/withdraw/assets?chainIds=<chainId>&networks=EVM&accountType=perp`. Response `data[]`: name, contractAddress, decimals, isNative, chainId. Use to pick asset and token contract for ERC20.
-2. **Deposit address** — GET `web3/ae/deposit-address?chainId=<chainId>`. Response `data` = deposit address (string). Same address for native and ERC20 on that chain. **The address is validated against a hardcoded whitelist in `common.mjs` (SEC-01).**
+1. **Deposit address** — Hardcoded per chain in `scripts/common.mjs` (SEC-01). Same address for native and ERC20 on that chain.
 3. **Balance check** — Verify the wallet has sufficient balance for the deposit amount + gas BEFORE submitting any transaction (SEC-06).
 4. **User confirmation** — See above. Always confirm before executing.
 5. **On-chain send** — From wallet (key from env), sign with appropriate RPC for chain:
    - **Native:** `treasury.depositNative(broker)` with `value = amount` (wei).
-   - **ERC20:** `token.approve(treasury, amount)` then `treasury.deposit(token, amount, broker)`.
+   - **ERC20:** `token.approve(treasury, amount)` then `treasury.deposit(token, amount, broker)`. Token metadata (contract + decimals) is provided explicitly (no API lookup).
    - All transactions use an explicit gas limit (SEC-09) and wait for multiple confirmations per chain (SEC-10).
 
 ## Security
@@ -73,8 +70,8 @@ Optional: `scripts/` — Bun + viem. Install: `cd skills/aster-deposit-fund/scri
 
 | Script | Purpose |
 |--------|---------|
-| `deposit.mjs` | Deposit: `ASTER_DEPOSIT_PRIVATE_KEY=0x... bun run deposit.mjs --chain <eth\|bsc\|arbitrum> --asset <SYMBOL> --amount <amount> [--broker <id>] [--dry-run]` |
-| `balance.mjs` | Wallet balances (read-only): `bun run balance.mjs --chain <eth\|bsc\|arbitrum> --address <0x...>` |
+| `deposit.mjs` | Deposit (no API lookups): `ASTER_DEPOSIT_PRIVATE_KEY=0x... bun run deposit.mjs --chain <eth\|bsc\|arbitrum> --native --amount <amount> [--broker <id>] [--dry-run]` or `... --token <0x...> --decimals <n> [--symbol <SYM>] --amount <amount> ...` |
+| `balance.mjs` | Wallet balances (read-only, offline): `bun run balance.mjs --chain <eth\|bsc\|arbitrum> --address <0x...> [--no-native] [--token <SYM:0xADDR:DECIMALS>]...` |
 
 See `.env.example` in the repo root for all env vars.
 

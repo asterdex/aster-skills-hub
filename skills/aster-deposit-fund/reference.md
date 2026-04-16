@@ -8,28 +8,10 @@
 | BSC | 56 |
 | Arbitrum | 42161 |
 
-## GET aster/withdraw/assets
+## Configuration (no API lookups)
 
-Query: `chainIds`, `networks=EVM`, `accountType=perp`. Response: `data` array of assets.
-
-| Field | Notes |
-|-------|--------|
-| name | Token symbol |
-| displayName | Display label |
-| contractAddress | Token contract (ERC20) or wrapped/native representation |
-| decimals | Token decimals |
-| network | EVM |
-| chainId | Chain ID |
-| withdrawType | e.g. autoWithdraw |
-| isNative | true = native asset (e.g. ETH, BNB) |
-| isProfit | Deposit/withdraw supported |
-| rank | Display order |
-
-For native assets, `contractAddress` may be a wrapped form; use `isNative` to detect. Use `contractAddress` for ERC20 approve/transfer.
-
-## GET web3/ae/deposit-address
-
-Query: `chainId`. Response: `data` = single string (EVM address). Use as recipient for native value or ERC20 transfer.
+- **Treasury (deposit) address**: hardcoded per chain in `scripts/common.mjs` (SEC-01).
+- **ERC20 metadata**: provided explicitly at runtime (token contract address + decimals). No assets discovery endpoint is used.
 
 ## On-chain
 
@@ -42,5 +24,5 @@ In `scripts/`: Bun + `bun install`. Shared env: `ETH_RPC_URL`, `BSC_RPC_URL`, `A
 
 | Script | Env | Usage |
 |--------|-----|--------|
-| deposit.mjs | ASTER_DEPOSIT_PRIVATE_KEY (required) | `bun run deposit.mjs --chain <eth|bsc|arbitrum> --asset <SYMBOL> --amount <human amount> [--broker <n>] [--dry-run]`. Fetches assets and deposit address from BAPI; native = depositNative; ERC20 = approve then treasury.deposit. |
-| balance.mjs | ASTER_DEPOSIT_PRIVATE_KEY (optional if --address set) | `bun run balance.mjs --chain <eth|bsc|arbitrum> [--address <0x...>]`. Fetches assets from `aster/withdraw/assets`, then native + ERC20 balances for wallet. |
+| deposit.mjs | ASTER_DEPOSIT_PRIVATE_KEY (required) | Native: `bun run deposit.mjs --chain <eth|bsc|arbitrum> --native --amount <human amount> [--broker <n>] [--dry-run]`. ERC20: `bun run deposit.mjs --chain <eth|bsc|arbitrum> --token <0x...> --decimals <n> [--symbol <SYM>] --amount <human amount> [--broker <n>] [--dry-run]`. No Aster API calls. |
+| balance.mjs | ASTER_DEPOSIT_PRIVATE_KEY (optional if --address set) | `bun run balance.mjs --chain <eth|bsc|arbitrum> --address <0x...> [--no-native] [--token <SYM:0xADDR:DECIMALS>]...`. No Aster API calls. |

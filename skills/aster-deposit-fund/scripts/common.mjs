@@ -13,8 +13,6 @@ import { getAddress } from "viem";
 import { mainnet, bsc, arbitrum } from "viem/chains";
 import { treasuryContractABI } from "./aster-smart-contract-abi.ts";
 
-export const BAPI_BASE = "https://www.asterdex.com/bapi/futures/v1/public/future";
-
 // --- SEC-10: Required confirmations per chain (reorg protection) ---
 export const REQUIRED_CONFIRMATIONS = {
   1: 2,      // ETH: 2 confirmations
@@ -32,9 +30,7 @@ export const CHAINS = {
 };
 
 // --- SEC-01: Treasury address whitelist (hardcoded deposit addresses) ---
-// When set, getDepositAddress() returns this and skips the API call.
 // Addresses MUST be checksummed (mixed-case EIP-55).
-// Set env ASTER_TREASURY_WHITELIST_DISABLED=true ONLY for development/testing.
 const TREASURY_WHITELIST = {
   1: "0x604DD02d620633Ae427888d41bfd15e38483736E",     // ETH mainnet (deposit-address?chainId=1)
   56: "0x128463A60784c4D3f46c23Af3f65Ed859Ba87974",    // BSC (deposit-address?chainId=56)
@@ -52,43 +48,16 @@ export const ERC20_BALANCE_ABI = [
 // --- SEC-05: Single source of truth for treasury ABI (imported from aster-smart-contract-abi.ts) ---
 export const TREASURY_ABI = treasuryContractABI;
 
-export async function fetchJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${url}`);
-  const json = await res.json();
-  if (json.code !== "000000" && json.success !== true) throw new Error(json.messageDetail || json.message || "API error");
-  return json;
-}
-
-export async function getAssets(chainId) {
-  const url = `${BAPI_BASE}/aster/withdraw/assets?chainIds=${chainId}&networks=EVM&accountType=perp`;
-  const json = await fetchJson(url);
-  return json.data || [];
-}
-
-// --- SEC-01: Hardcoded deposit address when in whitelist; otherwise fetch and validate ---
+// --- SEC-01: Hardcoded deposit address only (no API calls) ---
 export async function getDepositAddress(chainId) {
   const hardcoded = TREASURY_WHITELIST[chainId];
   if (hardcoded) {
     return getAddress(hardcoded);
   }
-
-  const url = `${BAPI_BASE}/web3/ae/deposit-address?chainId=${chainId}`;
-  const json = await fetchJson(url);
-  const addr = json.data;
-  if (!addr || typeof addr !== "string") throw new Error("Missing deposit address from API");
-  const checksummed = getAddress(addr);
-
-  const whitelistDisabled = process.env.ASTER_TREASURY_WHITELIST_DISABLED === "true";
-  if (!whitelistDisabled) {
-    console.warn(
-      `[SEC-01] WARNING: No whitelisted treasury address for chainId ${chainId}. ` +
-      `Set TREASURY_WHITELIST[${chainId}] in common.mjs before using in production. ` +
-      `Set ASTER_TREASURY_WHITELIST_DISABLED=true to suppress (dev/test only).`
-    );
-  }
-
-  return checksummed;
+  throw new Error(
+    `[SEC-01] No hardcoded treasury address for chainId ${chainId}. ` +
+    `Refuse to proceed without an allowlisted deposit address.`
+  );
 }
 
 // --- SEC-04: RPC URL with production warning ---
