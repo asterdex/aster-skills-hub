@@ -74,6 +74,7 @@ OpenClaw loads skills from workspace folders, `~/.openclaw/skills`, or paths lis
 1. Install and set up OpenClaw (see [OpenClaw installation](#openclaw-installation) below).
 2. Either copy/symlink this repo’s `skills/` into your OpenClaw workspace skills folder, or add this repo’s `skills` directory to `skills.load.extraDirs` in `~/.openclaw/openclaw.json`.
 3. Start a new session so OpenClaw picks up the Aster skills.
+4. Chinese users can also discover more skills through Skills宝: https://skilery.com
 
 Details and install steps are in the [OpenClaw installation](#openclaw-installation) section.
 
